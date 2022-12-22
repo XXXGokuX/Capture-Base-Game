@@ -30,23 +30,62 @@ enemyActions.push({
   "attack" : "https://i.postimg.cc/qBsCBDM2/c.png",
   "death" : "https://postimg.cc/bsHFrQ6Q"
  })
+enemyActions.push({
+  "walk": "https://i.postimg.cc/nzDxCjcc/Run.png",
+  "gethit" : "https://i.postimg.cc/DwP8wNpY/Take-Hit.png",
+  "attack" : "https://i.postimg.cc/7LC8WGzM/Attack.png",
+ })
+
+enemyActions.push({
+  "walk": "https://i.postimg.cc/Qdk4XpLJ/Run-1.png",
+  "gethit" : "https://i.postimg.cc/dtGnB80c/Take-Hit-1.png",
+  "attack" : "https://i.postimg.cc/wx7GhyJ9/Attack-1.png",
+ })
+
+enemyActions.push({
+  "walk": "https://i.postimg.cc/dtzP7RxM/Flight.png",
+  "gethit" : "https://i.postimg.cc/pT03PKF6/Take-Hit-2.png",
+  "attack" : "https://i.postimg.cc/W1kVSYkb/Attack-2.png",
+ })
+
+const defenderActions= {
+  
+  "stand" : "https://i.postimg.cc/kX887LM8/Biker-idle.png",
+  "attack" : "https://i.postimg.cc/vBgT36c9/Biker-attack2.png",
+  "shoot" : "https://i.postimg.cc/WbGnC28P/Biker-attack3.png"
+}
+
+const defenderFrames= {
+  
+  "stand" : 3,
+  "attack" : 7,
+  "shoot" : 7
+}
+
+
 //Different Enemy Actions Frames
 
 enemyFrames.push({
     "walk": 3,
     "gethit": 3,
     "attack": 7,
-    "death": {
-      startFrame: 3
-    }
 })
 
-const enemy1= new Image()
-enemy1.src= enemyActions[0].walk
-diffEnemy.push(enemy1)
-
-
-
+enemyFrames.push({
+    "walk": 7,
+    "gethit": 3,
+    "attack": 7,
+})
+enemyFrames.push({
+    "walk": 7,
+    "gethit": 3,
+    "attack": 7,
+})
+enemyFrames.push({
+    "walk": 7,
+    "gethit": 3,
+    "attack": 7,
+})
 
 
 //TOP-CONTROL-BAR
@@ -64,7 +103,11 @@ const mouse= {
   width:0.1
 } 
 //CANVAS POSITION
-const canvasPosition= canvas.getBoundingClientRect()
+var canvasPosition= canvas.getBoundingClientRect()
+
+canvas.addEventListener('resize',()=>{
+  canvasPosition= canvas.getBoundingClientRect()
+})
 
 //EVENT-LISTENER ON MOUSE
 canvas.addEventListener("mousemove",(e)=>{
@@ -88,6 +131,8 @@ class Cell
          this.y= y
          this.width= cellSize
          this.height= cellSize
+         this.image= new Image()
+         this.image.src= "https://i.postimg.cc/CLFcNsxC/tileset.png"
       }
       
       draw()
@@ -97,6 +142,7 @@ class Cell
                ctx.strokeStyle= "black"
                ctx.strokeRect(this.x,this.y,this.width,this.height)
            }
+ ctx.drawImage(this.image,0,0,33,31,this.x,this.y,this.width,this.height)       
         
       }
   }
@@ -130,26 +176,46 @@ class Defender{
       this.projectiles= []
       this.shooting= false
       this.timer= 0 
+      this.frameX= 0
+      this.maxFrame= defenderFrames.stand
+      this.image= new Image()
+      this.image.src= defenderActions.stand
+     this.spriteWidth= 48
+     this.spriteHeight= 48  
+     this.frameInterval= 10
    }
   update()
   {
      this.timer++;
-     
+     if(frame%this.frameInterval == 0)
+        {
+              if(this.frameX < this.maxFrame) this.frameX++
+              else this.frameX= 0    
+        }
      //Shoot if enemy is present
-     if(enemyVerticalPositions.includes(this.y)) this.shooting= true
-     else this.shooting= false
-    
-     if(this.timer%100 === 0 && this.shooting)
-       this.projectiles.push(new Bullet(this.x+this.width,this.y+this.height/4))
-     
+     if(enemyVerticalPositions.includes(this.y))
+     {
+       this.shooting= true
+       this.image.src= defenderActions.shoot
+       this.maxFrame= defenderFrames.shoot
+     }else
+     {
+       this.shooting= false
+       this.image.src= defenderActions.stand
+       this.maxFrame= defenderFrames.stand
+     }
+     if(this.timer%60 === 0 && this.shooting)
+      {
+       this.projectiles.push(new Bullet(this.x+this.width,this.y+50))
+      }
   }
   
   
   draw()
   {
       //Defender Rect at (x,y)
-      ctx.fillStyle= "blue"
-      ctx.fillRect(this.x,this.y,this.width,this.height)
+      
+    ctx.drawImage(this.image,this.frameX*this.spriteWidth,0,this.spriteWidth,this.spriteHeight,this.x+25,this.y,this.width,this.height)
       
       //Defender Health
       ctx.fillStyle= "gold"
@@ -204,17 +270,31 @@ function displayDefender()
                  //If Collide ???
                  eobj.movement= 0
                  eobj.attack= true
-               
+                 
+                 if(eobj.frameX === 2)
                  defenders[di].health -= 0.2
              }
             
            //If defender Loose
            if(defenders[di] && defenders[di].health <= 0)
              {
+                eobj.attack= false
+                eobj.enemyImg.src= enemyActions[0].walk 
+                eobj.frameX= 0
+                eobj.maxFrame= enemyFrames[0].walk
+               
                 defenders.splice(di,1)
                 di--;
                 eobj.movement= eobj.speed
              }
+          
+          //Enemy Attack Defender if collide
+          if(eobj.attack)
+            {
+                eobj.enemyImg.src= enemyActions[enemies[ei].enemyNo].attack
+                eobj.maxFrame= enemyFrames[enemies[ei].enemyNo].attack
+            }
+          
           
         }) 
        
@@ -229,25 +309,36 @@ class Bullet{
   {
      this.x= x
      this.y= y
-     this.width= 10
-     this.height= 10
+     this.width= 50
+     this.height= 20
      this.power= 20
      this.speed= 5
+     this.frameX= 0
+     this.maxFrame= 10
+     this.image= new Image()
+     this.image.src= "https://i.postimg.cc/mZN4X47v/Sprite-Sheet-Blue-Hurt.png" 
+     this.frameInterval= 20
+     this.spriteWidth= 96
+     this.spriteHeight= 32
      
   }
   update()
   {
      //Moving... Bullets
      this.x += this.speed
+     if(frame%this.frameInterval == 0)
+        {
+              if(this.frameX < this.maxFrame) this.frameX++
+              else this.frameX= 0    
+        }
+    
   }
+  
   
   draw()
   {
      //Drawing Bullet
-     ctx.fillStyle= 'black'
-     ctx.beginPath()
-     ctx.arc(this.x,this.y,this.width,0,Math.PI * 2)
-     ctx.fill()
+   ctx.drawImage(this.image,this.frameX*this.spriteWidth,0,this.spriteWidth,this.spriteHeight,this.x,this.y,this.width,this.height)
   }
   
 }
@@ -264,22 +355,40 @@ function displayBullets()
        //Each Enemies Bullet present in  its projectiles
        for(let bi=0; bi<dobj.projectiles.length ; bi++)
          {
+           
              dobj.projectiles[bi].update()
              dobj.projectiles[bi].draw()
-           
+            
            //If Bullet Collide With Enemy decreases its health
            for(let ei=0 ; ei<enemies.length ; ei++)
              {
                  if(dobj.projectiles[bi] && enemies[ei] &&
+                   
                    isCollidev1(dobj.projectiles[bi],enemies[ei]))
                    {
                       //Collide b/w Bullet & Enemy
+                     
                       enemies[ei].health -= dobj.projectiles[bi].power
+                     
+                    if( !enemies[ei].attack )
+                    {   
                      //Enemy Collision with Bullet Effect
-                  
+                     enemies[ei].enemyImg.src= enemyActions[enemies[ei].enemyNo].gethit
+                     enemies[ei].frameX= 0
+                     enemies[ei].maxFrame= enemyFrames[enemies[ei].enemyNo].gethit 
                     
                      //Enemy Again Walk
                      
+                     setTimeout(()=>{
+                       
+                       if(enemies[ei])
+                      {
+                        enemies[ei].enemyImg.src= enemyActions[enemies[ei].enemyNo].walk
+                     enemies[ei].frameX= 0
+                     enemies[ei].maxFrame= enemyFrames[enemies[ei].enemyNo].walk
+                      }
+                     },100)
+                    } 
                      
                       dobj.projectiles.splice(bi,1)
                       bi--
@@ -329,20 +438,22 @@ class Enemy{
   {
       this.x= canvasW
       this.y= verticalPosition
-      this.width= cellSize
-      this.height= cellSize
+      this.width= cellSize +50
+      this.height= cellSize +50
     
       this.speed= Math.random()*0.2 + 0.4
       this.movement= this.speed
-      this.health= 100
+      this.health= 200
       this.maxHealth= this.health
       this.bullets= []
-      this.enemyNo= 0
-      this.enemyImg= diffEnemy[this.enemyNo]
+      this.enemyNo= Math.floor(Math.random()*4)
+      this.enemyImg= new Image()
+      this.enemyImg.src= enemyActions[this.enemyNo].walk
       this.attack= false
+      this.isEnemyDead= false
       this.spriteWidth= 150
       this.spriteHeight= 150
-      this.maxFrame= 3
+      this.maxFrame= enemyFrames[this.enemyNo].walk
       this.frameX= 0
       this.frameInterval= 10
   }
@@ -352,15 +463,15 @@ class Enemy{
       this.x -= this.movement
       if(frame%this.frameInterval == 0)
         {
-           if(this.frameX < this.maxFrame) this.frameX++
-           else this.frameX= 0
+              if(this.frameX < this.maxFrame) this.frameX++
+              else this.frameX= 0    
         }
   }
   
   draw()
   {
     //Enemy  Rect at (x,y)
-    ctx.drawImage(this.enemyImg,this.frameX*this.spriteWidth,0,this.spriteWidth,this.spriteHeight,this.x,this.y,this.width,this.height)
+    ctx.drawImage(this.enemyImg,this.frameX*this.spriteWidth,0,this.spriteWidth,this.spriteHeight,this.x-20,this.y-20,this.width,this.height)
     
     //Enemy Health
       ctx.fillStyle= "black"
@@ -540,8 +651,10 @@ function animation()
     ctx.clearRect(0,0,canvasW,canvasH)
   
     //Top-Control-Bar
-    ctx.fillStyle= "blue"
-    ctx.fillRect(0,0,controlBar.width,controlBar.height)
+    
+    let bimg= new Image()
+    bimg.src= "https://i.postimg.cc/FKnpFMyD/background.png"
+    ctx.drawImage(bimg,0,0,1078,224,0,0,controlBar.width,controlBar.height) 
     
     //Display All Grid
     displayGrid()
